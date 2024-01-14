@@ -216,12 +216,12 @@ void SerialCommandManager::sendMessage(String messageType, String message, Strin
 	Serial.print(":");
 	Serial.print(message);
 	
-  if (identifier.length() > 0)
-	  Serial.print(": (" + identifier + ")");
+	if (identifier.length() > 0)
+		Serial.print(": (" + identifier + ")");
 	
-	if (message.endsWith(String(_terminator)))
-		Serial.println("");
-	else if (_terminator != '\n')
+	if (!message.endsWith(String(_terminator)))
+		/*Serial.println("");
+	else*/
 		Serial.println(_terminator);
 }
 

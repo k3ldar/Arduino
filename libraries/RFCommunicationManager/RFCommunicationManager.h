@@ -38,9 +38,9 @@ class RFCommunicationManager
 	void prepareNewRFPacket(RFPacket* packet, const short int messageId);
 	void cleanRFPacket(RFPacket* packet);
   public:
-    RFCommunicationManager(SendMessageCallback *sendMesageCallback, char senderId, bool _isLocalHub, RF24 *radio);
+    RFCommunicationManager(char senderId, bool _isLocalHub, RF24 *radio);
     ~RFCommunicationManager();
-    void initialize();
+    void initialize(SendMessageCallback *sendMesageCallback);
     void process();
     bool isChipConnected();
     bool isInitialized();

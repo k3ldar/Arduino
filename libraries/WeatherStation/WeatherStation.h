@@ -4,28 +4,30 @@
 #include <Arduino.h>
 #include <Temperature_LM75_Derived.h>
 #include "RFCommunicationManager.h"
+#include "Common.h"
 
 #define MillisBetweenSensorReading 1500;
 
 class WeatherStation
 {
 private:
-	RFCommunicationManager *_rfCommandMgr;
-  Generic_LM75 *_lm75;
+	Generic_LM75 *_lm75;
 	int _tempSensorSignalPin;
 	double _currentTemperature;
 	float _tempCelsius;
 
-  int _rainSensorAnalogPin;
+	int _rainSensorAnalogPin;
 
 	unsigned long _nextUpdateTime;
+	void readTemperatureSensor();
+	void readRainSensor();
 
-  void readTemperatureSensor();
-  void readRainSensor();
+	SendMessageCallback *_sendMessageCallback;
+	RFCommunicationManager *_rfCommandMgr;
 public:
 	WeatherStation(int tempSensorSignalPin, int rainSensorAnalogPin);
 	~WeatherStation();
-	void initialize(RFCommunicationManager *rfCommandMgr);
+	void initialize(SendMessageCallback *sendMesageCallback, RFCommunicationManager *rfCommandMgr);
 	void process();
 };
 

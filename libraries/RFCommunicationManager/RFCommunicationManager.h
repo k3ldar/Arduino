@@ -4,17 +4,10 @@
 #include <SPI.h>             /* to handle the communication interface with the modem*/
 #include <nRF24L01.h>        /* to handle this particular modem driver*/
 #include <RF24.h>
+#include "Common.h"
 
 #define MAX_PACKET_DATA_SIZE 26
 
-enum MessageType
-{
-	Error,
-	Debug,
-	Information
-};
-
-typedef void SendMessageCallback(String message, MessageType messageType);
 
 const short int HEARTBEAT_MESSAGE_ID = 1;
 

@@ -23,7 +23,7 @@ void RFCommunicationManager::initialize()
 {
   _nextHeartbeat = millis();
 
-  _isInitialized = true;;
+  _isInitialized = true;
 }
 
 void RFCommunicationManager::process()

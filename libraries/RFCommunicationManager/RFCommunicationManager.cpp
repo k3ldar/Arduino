@@ -89,26 +89,33 @@ bool RFCommunicationManager::broadcastRFData(RFPacket* rfPacket)
 
 	_radio->startListening();
 
-	if (!result)
-	{
-		String errorMsg = "Failed to broadcast data; Sender: ";
-		errorMsg.concat(rfPacket->senderId);
-		errorMsg.concat("; IsChipConnected: ");
-		errorMsg.concat(_radio->isChipConnected());
-		errorMsg.concat("; Size: ");
-		errorMsg.concat(sizeof(RFPacket));
-		errorMsg.concat("; PacketId: ");
-		errorMsg.concat(rfPacket->packetId);
-		errorMsg.concat("; MessageId: ");
-		errorMsg.concat(rfPacket->messageId);
-		errorMsg.concat("; Ack Required: ");
-		errorMsg.concat(rfPacket->ackRequired);
-		errorMsg.concat("; IsAck: ");
-		errorMsg.concat(rfPacket->isAck);
-		errorMsg.concat("; Data: ");
-		errorMsg.concat(rfPacket->data);
-		_sendMessageCallback(errorMsg, Error);
-	}
+	String msg = "";
+	
+	if (result)
+		msg = "Message Broadcast; Sender: ";
+	else
+		msg = "Failed to broadcast data; Sender: ";
+		 
+	msg.concat(rfPacket->senderId);
+	msg.concat("; IsChipConnected: ");
+	msg.concat(_radio->isChipConnected());
+	msg.concat("; Size: ");
+	msg.concat(sizeof(RFPacket));
+	msg.concat("; PacketId: ");
+	msg.concat(rfPacket->packetId);
+	msg.concat("; MessageId: ");
+	msg.concat(rfPacket->messageId);
+	msg.concat("; Ack Required: ");
+	msg.concat(rfPacket->ackRequired);
+	msg.concat("; IsAck: ");
+	msg.concat(rfPacket->isAck);
+	msg.concat("; Data: ");
+	msg.concat(rfPacket->data);
+		
+	if (result)
+		_sendMessageCallback(msg, Debug);
+	else
+		_sendMessageCallback(msg, Error);
 
 	return result;
 }

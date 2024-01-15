@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <Temperature_LM75_Derived.h>
+#include <dht11.h>
 #include "RFCommunicationManager.h"
 #include "Common.h"
 
@@ -12,7 +13,8 @@ class WeatherStation
 {
 private:
 	Generic_LM75 *_lm75;
-	int _tempSensorSignalPin;
+	dht11 *_dht11;
+	int _dht11SensorSignalPin;
 	double _currentTemperature;
 	float _tempCelsius;
 
@@ -21,6 +23,7 @@ private:
 	unsigned long _nextUpdateTime;
 	void readTemperatureSensor();
 	void readRainSensor();
+	void readDHT11Sensor();
 
 	SendMessageCallback *_sendMessageCallback;
 	RFCommunicationManager *_rfCommandMgr;

@@ -32,8 +32,8 @@ class dht11
 {
 public:
     int read(int pin);
-	int humidity;
-	int temperature;
+	float humidity;
+	float temperature;
 };
 #endif
 //

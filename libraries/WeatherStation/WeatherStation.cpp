@@ -47,7 +47,7 @@ void WeatherStation::readDHT11Sensor()
 	float humidity = (float)_dht11->humidity;
 	float tempC = (float)_dht11->temperature;
 	
-	if (_rfCommandMgr != NULL && _rfCommandMgr->isInitialized())
+	if (_rfCommandMgr != NULL)
     {
 		char tempCBuf[MAX_PACKET_DATA_SIZE];
 		dtostrf(tempC, 0, 2, tempCBuf);
@@ -74,7 +74,7 @@ void WeatherStation::readTemperatureSensor()
 	String(_currentTemperature);
 	_sendMessageCallback(updateTemp, Information);
 
-	if (_rfCommandMgr != NULL && _rfCommandMgr->isInitialized())
+	if (_rfCommandMgr != NULL)
     {
 		char tempBuf[MAX_PACKET_DATA_SIZE];
 		dtostrf(_currentTemperature, 0, 2, tempBuf);
@@ -96,7 +96,7 @@ void WeatherStation::readRainSensor()
 	char tempBuf[MAX_PACKET_DATA_SIZE];
 	sprintf(tempBuf, "%d", outputValue);
 	
-	if (_rfCommandMgr != NULL && _rfCommandMgr->isInitialized())
+	if (_rfCommandMgr != NULL)
 	{
 		_rfCommandMgr->sendMessage(true, 501, tempBuf);
 	}

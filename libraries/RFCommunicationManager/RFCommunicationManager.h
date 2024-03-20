@@ -27,24 +27,26 @@ class RFCommunicationManager
     RF24 *_radio;
     char _senderId;
     bool _isLocalHub;
-    bool _isInitialized;
+    bool _isConnected;
 	unsigned long _nextHeartbeat;
 	RFPacket _heartbeat;
+	unsigned long _nextAutoReconnect;
 
 	SendMessageCallback *_sendMessageCallback;
     bool broadcastRFData(RFPacket* rfPacket);
+	void sendHeartbeat(unsigned long mil);
 	void copyData(RFPacket* packetTo, const RFPacket* packetFrom);
 	void copyData(RFPacket* packetTo, char data[MAX_PACKET_DATA_SIZE]);
 	void prepareNewRFPacket(RFPacket* packet, const short int messageId);
 	void cleanRFPacket(RFPacket* packet);
   public:
-    RFCommunicationManager(char senderId, bool _isLocalHub, RF24 *radio);
+    RFCommunicationManager(SendMessageCallback* sendMesageCallback, char senderId, bool _isLocalHub, RF24 *radio);
     ~RFCommunicationManager();
-    void initialize(SendMessageCallback *sendMesageCallback);
     void process();
     bool isChipConnected();
-    bool isInitialized();
 	bool sendMessage(bool ackRequired, short int messageId, char data[MAX_PACKET_DATA_SIZE]);
+	bool connectToRadio(const byte* readAddress, const byte* writeAddress);
+	bool canReconnect();
 };
 
 #endif

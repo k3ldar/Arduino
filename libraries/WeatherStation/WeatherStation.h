@@ -1,5 +1,5 @@
-#ifndef __WeatherStation__
-#define __WeatherStation__
+#ifndef __WeatherStation__H
+#define __WeatherStation__H
 
 #include <Arduino.h>
 #include <Temperature_LM75_Derived.h>

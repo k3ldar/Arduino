@@ -1,1 +1,7 @@
 /libraries/readme.txt
+/libraries/Adafruit_BusIO/
+/libraries/Adafruit_GFX_Library/
+/libraries/Adafruit_IS31FL3741_Library/
+/libraries/ArduinoJson/
+/libraries/WiFiNINA/
+/WiFiWebClientTest/arduino_secrets.h

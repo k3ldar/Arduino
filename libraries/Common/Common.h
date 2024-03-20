@@ -1,5 +1,6 @@
-#ifndef __Common__
-#define __Common__
+#ifndef __Common__H
+#define __Common__H
+
 
 enum MessageType
 {
@@ -10,4 +11,10 @@ enum MessageType
 
 typedef void SendMessageCallback(String message, MessageType messageType);
 
+
+struct JsonResponse
+{
+	bool success;
+	String json;
+};
 #endif

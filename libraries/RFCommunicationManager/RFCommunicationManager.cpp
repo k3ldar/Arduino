@@ -1,11 +1,13 @@
 #include "RFCommunicationManager.h"
 
-RFCommunicationManager::RFCommunicationManager(char senderId, bool isLocalHub, RF24 *radio)
+RFCommunicationManager::RFCommunicationManager(SendMessageCallback* sendMesageCallback, char senderId, bool isLocalHub, RF24 *radio)
 {
+	_sendMessageCallback = sendMesageCallback;
 	_senderId = senderId;
 	_radio = radio;
 	_isLocalHub = isLocalHub;
-	_isInitialized = false;
+	_nextAutoReconnect = millis();
+	_nextHeartbeat = _nextAutoReconnect;
 }
 
 RFCommunicationManager::~RFCommunicationManager()
@@ -13,61 +15,62 @@ RFCommunicationManager::~RFCommunicationManager()
   
 }
 
-bool RFCommunicationManager::isInitialized()
-{
-	return _isInitialized;
-}
-
-void RFCommunicationManager::initialize(SendMessageCallback *sendMesageCallback)
-{
-	_sendMessageCallback = sendMesageCallback;
-	_nextHeartbeat = millis();
-
-	_isInitialized = true;
-}
-
 void RFCommunicationManager::process()
 {
-	if (_radio->available())
+	unsigned long mil = millis();
+	_isConnected = _radio->isChipConnected();
+
+	if (_isConnected && _radio->available())
 	{
 		RFPacket rfData;
 		cleanRFPacket(&rfData);
 		_radio->read(&rfData, sizeof(RFPacket));
 		
-		String debugMsg = "Message Received; Sender: ";
-		debugMsg.concat(String(rfData.senderId));
-		debugMsg.concat("; PacketId: ");
-		debugMsg.concat(String(rfData.packetId));
-		debugMsg.concat("; MessageId: ");
-		debugMsg.concat(String(rfData.messageId));
-		debugMsg.concat("; Ack Required: ");
-		debugMsg.concat(String(rfData.ackRequired));
-		debugMsg.concat("; IsAck: ");
-		debugMsg.concat(rfData.isAck);
-		debugMsg.concat("; Data: ");
-		debugMsg.concat(rfData.data);
-		
-		if (rfData.isAck)
-			_sendMessageCallback(debugMsg, Debug);
-		else
-			_sendMessageCallback(debugMsg, Information);
+		if (rfData.senderId > 0)
+		{
+			String debugMsg = "Message Received; Sender: ";
+			debugMsg.concat(String(rfData.senderId));
+			debugMsg.concat("; PacketId: ");
+			debugMsg.concat(String(rfData.packetId));
+			debugMsg.concat("; MessageId: ");
+			debugMsg.concat(String(rfData.messageId));
+			debugMsg.concat("; Ack Required: ");
+			debugMsg.concat(String(rfData.ackRequired));
+			debugMsg.concat("; IsAck: ");
+			debugMsg.concat(rfData.isAck);
+			debugMsg.concat("; Data: ");
+			debugMsg.concat(rfData.data);
+			
+			if (rfData.isAck)
+				_sendMessageCallback(debugMsg, Debug);
+			else
+				_sendMessageCallback(debugMsg, Information);
 
-		if (_isLocalHub)
-		{
-			broadcastRFData(&rfData);
-		}
-		else if (rfData.ackRequired && !rfData.isAck && rfData.senderId != _senderId)
-		{
-			RFPacket ackData;
-			prepareNewRFPacket(&ackData, rfData.messageId);
-			ackData.isAck = true;
-			copyData(&ackData, &rfData);
-			broadcastRFData(&ackData);
-			_sendMessageCallback("Ack Sent", Debug);
+			if (_isLocalHub)
+			{
+				broadcastRFData(&rfData);
+			}
+			else if (rfData.ackRequired && !rfData.isAck && rfData.senderId != _senderId)
+			{
+				RFPacket ackData;
+				prepareNewRFPacket(&ackData, rfData.messageId);
+				ackData.isAck = true;
+				copyData(&ackData, &rfData);
+				broadcastRFData(&ackData);
+				_sendMessageCallback("Ack Sent", Debug);
+			}
 		}
 	}
-  
-	unsigned long mil = millis();
+	else if (!_isConnected && mil > _nextAutoReconnect)
+	{
+		_nextAutoReconnect = mil + 2000;
+	}
+	
+	sendHeartbeat(mil);
+}
+
+void RFCommunicationManager::sendHeartbeat(unsigned long mil)
+{
 	if (mil > _nextHeartbeat)
 	{
 		_nextHeartbeat = mil + 2000;
@@ -87,12 +90,17 @@ void RFCommunicationManager::process()
 
 bool RFCommunicationManager::broadcastRFData(RFPacket* rfPacket)
 {
-	_radio->stopListening();
+	bool result = _radio->isChipConnected();
+	
+	if (result)
+	{
+		_radio->stopListening();
 
-	bool result = _radio->write(rfPacket, sizeof(RFPacket));
+		result = _radio->write(rfPacket, sizeof(RFPacket), false);
 
-	_radio->startListening();
-
+		_radio->startListening();
+	}
+	
 	String msg = "";
 	
 	if (result)
@@ -134,6 +142,43 @@ bool RFCommunicationManager::sendMessage(bool ackRequired, short int messageId, 
 	bool result = broadcastRFData(&rfData);
 
 	return result;
+}
+
+bool RFCommunicationManager::connectToRadio(const byte* readAddress, const byte* writeAddress)
+{
+	bool isConnected = _radio->begin();
+	
+	if (!isConnected)
+	{
+		Serial.println("Radio not responding");
+		return false;
+	}  
+
+	_radio->openWritingPipe(writeAddress);
+
+	_radio->openReadingPipe(1, readAddress);
+
+	_radio->startListening();
+
+	Serial.print("Data rate: ");
+	Serial.println(_radio->getDataRate());
+	Serial.print("Ip Variant: ");
+	Serial.println(_radio->isPVariant());
+	Serial.print("Is Connected: ");
+	Serial.println(_radio->isChipConnected() ? "Yes" : "No");
+	
+	_radio->setPALevel(RF24_PA_MAX);
+	_radio->setDataRate(RF24_1MBPS);
+	_radio->setRetries(0, 0);
+	_radio->setAutoAck(false);
+	_isConnected = true;
+	
+	return _isConnected;
+}
+
+bool RFCommunicationManager::canReconnect()
+{
+	return !_isConnected && millis() > _nextAutoReconnect;
 }
 
 void RFCommunicationManager::copyData(RFPacket* packetTo, char data[MAX_PACKET_DATA_SIZE])

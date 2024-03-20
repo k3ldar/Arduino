@@ -1,8 +1,11 @@
-#ifndef __WaterPump__
-#define __WaterPump__
+#ifndef __WaterPump__H
+#define __WaterPump__H
 
 #include <Arduino.h>
 #include "Queue.h"
+
+#include "RFCommunicationManager.h"
+#include "Common.h"
 
 #define ReadSensorMs 1000
 #define Relay_1_Threshold 400
@@ -11,16 +14,16 @@
 #define MinimumPumpTimeMs 4000
 #define MinimumWorkingTemperature 1.0
 #define TemperatureNotSet -99.9
+#define TemperatureInitialValue -101
 
 const unsigned long ValidTemperatureLength = 3600000; // 1 hour in ms
 
-typedef void RFCallback(String data);
 
 class WaterPump
 {
 private:
 	Queue *_queue;
-	RFCallback *_rfCallback;
+	SendMessageCallback *_sendMessageCallback;
 	int _sensorSignalPin;
 	int _sensorValue;
 	int _sensorActivePin;
@@ -56,7 +59,7 @@ public:
 			  const int pump2Pin);
 	~WaterPump();
 	
-	void initialize(RFCallback *rfCallback);
+	void initialize(SendMessageCallback *_sendMessageCallback);
 	void process();
 	bool pump1Active();
 	bool pump2Active();

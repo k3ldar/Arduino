@@ -29,10 +29,10 @@ WaterPump::~WaterPump()
 	delete(_queue);
 }
  
-void WaterPump::initialize(RFCallback *rfCallback)
+void WaterPump::initialize(SendMessageCallback *_sendMessageCallback)
 {
-	_rfCallback = rfCallback;
-	_currentTemperature = TemperatureNotSet;
+	_sendMessageCallback = _sendMessageCallback;
+	_currentTemperature = TemperatureInitialValue;
 	pinMode(_sensorActivePin, OUTPUT);
 	pinMode(_sensorActiveLEDPin, OUTPUT);
 	pinMode(_pump1LEDPin, OUTPUT);
@@ -46,6 +46,7 @@ void WaterPump::initialize(RFCallback *rfCallback)
 	digitalWrite(_pump2LEDPin, LOW);
 	digitalWrite(_pump1Pin, LOW);
 	digitalWrite(_pump2Pin, LOW);
+
 }
 
 double WaterPump::temperatureGet()
@@ -68,6 +69,7 @@ void WaterPump::process()
 	
 	if (currTime > _nextTemperatureCheck)
 	{
+		_sendMessageCallback("Temperature not set", Debug);
 		temperatureSet(TemperatureNotSet);
 	}
 	
@@ -75,11 +77,12 @@ void WaterPump::process()
     
     if (currTime - _myTime > ReadSensorMs)
         validateSensor = true;
-  
-    if (validateSensor)
+	
+	if (validateSensor)
     {
         _myTime = currTime;
-    
+		_sendMessageCallback("Validating Sensor Value", Debug);
+    /*
         int s1Value = getSensorValue();
 
         if (_queue->isFull())
@@ -106,9 +109,9 @@ void WaterPump::process()
           String(_pump1Active) + "/" +
           String(_pump2Active);
 
-        _rfCallback(combined);
-        Serial.println(combined);
-    }	
+        _sendMessageCallback(combined, Information);
+*/	
+    }
 }
 
 int WaterPump::getSensorValue()

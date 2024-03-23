@@ -9,6 +9,11 @@
 #include "Common.h"
 
 #define MAXIMUM_FAILURES_TO_RECONNECT 5
+#define SOCKET_CONNECT_DELAY 1000
+
+#define GET_REQUEST_PENDING -1
+#define POST_REQUEST_PENDING -2
+
 
 class WebClientManager
 {
@@ -17,10 +22,10 @@ private:
 	bool _socketConnected;
 	int _connectResult;
 	bool _getRequestSent;
+	bool _postRequestSent;
 	int _wifiTimeout;
 	unsigned long _nextSocketConnectionRequest;
 	int _socketConnectFailures;
-	unsigned long _processCalledCount;
 
 	char *_ssid;
 	char *_pass;
@@ -29,6 +34,7 @@ private:
 	SendMessageCallback *_sendMessageCallback;
 	
 	void internalInitialize();
+	void sendDebugStatus();
 public:
 	WebClientManager();
 	~WebClientManager();
@@ -50,7 +56,7 @@ public:
 	bool post(const char *server, const char *path);
 	
 	
-	JsonResponse htmlParseBody(const String& data);
+	JsonResponse htmlParseJsonBody(const String& data);
 };
 
 #endif

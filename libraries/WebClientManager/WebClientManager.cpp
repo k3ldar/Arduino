@@ -5,7 +5,6 @@ WebClientManager::WebClientManager()
 	_connectResult = -1;
 	_nextSocketConnectionRequest = 0;
 	_socketConnectFailures = 0;
-	_processCalledCount = 0;
 	_getRequestSent = false;
 }
 
@@ -31,7 +30,7 @@ void WebClientManager::initialize(SendMessageCallback *sendMesageCallback, int t
 	
 	if (fv < WIFI_FIRMWARE_LATEST_VERSION)
 	{
-		Serial.println("Please upgrade the firmware");
+		sendMesageCallback("Please upgrade the firmware", Information);
 	}
 	
 	internalInitialize();
@@ -39,8 +38,6 @@ void WebClientManager::initialize(SendMessageCallback *sendMesageCallback, int t
 
 void WebClientManager::process()
 {
-	_processCalledCount++;
-	
 	if (_wifiStatus == WL_CONNECTING)
 	{
 		_wifiStatus = WiFi.isConnected();
@@ -69,20 +66,14 @@ void WebClientManager::connectToWiFi()
 
 void WebClientManager::printWifiStatus() 
 {
-  // print the SSID of the network you're attached to:
-  Serial.print("SSID: ");
-  Serial.println(WiFi.SSID());
-
-  // print your board's IP address:
-  IPAddress ip = WiFi.localIP();
-  Serial.print("IP Address: ");
-  Serial.println(ip);
-
-  // print the received signal strength:
-  long rssi = WiFi.RSSI();
-  Serial.print("signal strength (RSSI):");
-  Serial.print(rssi);
-  Serial.println(" dBm");
+	String wifiStatus = "SSID: ";
+	wifiStatus.concat(WiFi.SSID());
+	wifiStatus.concat("; Ip Address: ");
+	wifiStatus.concat(WiFi.localIP());
+	wifiStatus.concat("; Signal: ");
+	wifiStatus.concat(WiFi.RSSI());
+	wifiStatus.concat(" dBm");
+	_sendMessageCallback(wifiStatus, Information);
 }
 
 int WebClientManager::getWiFiStatus()
@@ -105,13 +96,16 @@ int WebClientManager::socketConnectFailures()
 
 bool WebClientManager::get(const unsigned long currMillis, const char *server, uint16_t port, const char *path)
 {
+	if (_postRequestSent)
+		return false;
+	
 	if (_wifiStatus == WL_CONNECTED && !_socketConnected && currMillis > _nextSocketConnectionRequest)
 	{
 		_sendMessageCallback("\nStarting connection to server", Debug);
 
 		if (!_socketConnected)
 		{
-			// if you get a connection, report back via serial:
+			// if you get a connection, report back via message callback :
 			_connectResult = _wifiClient->connect(server, port);
 			String connectResult = "client.connect result: ";
 			connectResult.concat(_connectResult);
@@ -137,26 +131,14 @@ bool WebClientManager::get(const unsigned long currMillis, const char *server, u
 			}
 		}
 			
-		_nextSocketConnectionRequest = currMillis + 2000;
-	}
-
-	if (_processCalledCount % 500 == 0)
-	{
-		String debugMessage = "Wifi Status: ";
-		debugMessage.concat(_wifiStatus);
-		debugMessage.concat("; socketConnected: ");
-		debugMessage.concat(_socketConnected);
-		debugMessage.concat("; currMillis: ");
-		debugMessage.concat(currMillis);
-		debugMessage.concat("; requestSent: ");
-		debugMessage.concat(_getRequestSent);
-		_sendMessageCallback(debugMessage, Debug);
+		_nextSocketConnectionRequest = currMillis + SOCKET_CONNECT_DELAY;
+		sendDebugStatus();
 	}
 	
 	if (!_getRequestSent && _connectResult > 0)
 	{
 		_socketConnected = true;
-		Serial.println("connected to server");
+		_sendMessageCallback("connected to server", Information);
 		// Make a HTTP request:
 		_wifiClient->print("GET ");
 		_wifiClient->print(path);
@@ -179,12 +161,16 @@ bool WebClientManager::getRequestSent()
 
 int WebClientManager::getReadResponse(char *buffer, int bufferSize)
 {
+	if (_postRequestSent)
+		return POST_REQUEST_PENDING;
+
 	if (!_getRequestSent || _wifiClient->peek() <= 0)
-		return -1;
+		return GET_REQUEST_PENDING;
 	
 	int count = 0;
-	Serial.print("reading response; client available: ");
-	Serial.println(_wifiClient->available());
+	String response = "reading response; client available: ";
+	response.concat(_wifiClient->available());
+	_sendMessageCallback(response, Debug);
 	
 	while (_wifiClient->available() && count < bufferSize)
 	{
@@ -225,7 +211,7 @@ bool WebClientManager::post(const char *server, const char *path)
 
 //// Json data
 
-JsonResponse WebClientManager::htmlParseBody(const String& data)
+JsonResponse WebClientManager::htmlParseJsonBody(const String& data)
 {
 	JsonResponse result;
 	result.success = false;
@@ -262,8 +248,22 @@ void WebClientManager::internalInitialize()
 	_wifiClient = new WiFiClient;
 	_socketConnected = false;
 	_getRequestSent = false;
+	_postRequestSent = false;
 	_socketConnectFailures = 0;
 	
 	WiFi.setTimeout(_wifiTimeout);
 	connectToWiFi();
+}
+
+void WebClientManager::sendDebugStatus()
+{
+	String debugMessage = "Wifi Status: ";
+	debugMessage.concat(_wifiStatus);
+	debugMessage.concat("; socketConnected: ");
+	debugMessage.concat(_socketConnected);
+	debugMessage.concat("; currMillis: ");
+	debugMessage.concat(millis());
+	debugMessage.concat("; requestSent: ");
+	debugMessage.concat(_getRequestSent);
+	_sendMessageCallback(debugMessage, Debug);
 }

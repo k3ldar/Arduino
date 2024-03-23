@@ -17,4 +17,5 @@ struct JsonResponse
 	bool success;
 	String json;
 };
+
 #endif

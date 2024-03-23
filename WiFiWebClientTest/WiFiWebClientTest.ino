@@ -15,7 +15,7 @@ char pass[] = SECRET_PASS;    // your network password (use for WPA, or use as k
 // use the numeric IP instead of the name for the server:
 //IPAddress server(74,125,232,128);  // numeric IP for Google (no DNS)
 //IPAddress server(127, 0, 0, 1);
-char server[] = "192.168.8.100";//"127.0.0.1";//"192.168.8.200";//"www.google.com";    // name address for Google (using DNS)
+char server[] = "192.168.8.201";//"127.0.0.1";//"192.168.8.200";//"www.google.com";    // name address for Google (using DNS)
 uint16_t port = 7100;
 
 WebClientManager webClient;
@@ -91,16 +91,8 @@ void loop()
 
                 String data = String(buffer);
 
-                JsonResponse response = webClient.htmlParseBody(data);
+                JsonResponse response = webClient.htmlParseJsonBody(data);
                 
-                //Serial.print("Body: ");
-                //Serial.println(body);
-
-                //JsonDocument doc;
-                //deserializeJson(doc, body);
-
-                //JsonResponse response = webClient.htmlParseBody(const String &data);
-
                 Serial.print("Json Success: ");
                 Serial.println(response.success);
                 Serial.print("Response Data: ");

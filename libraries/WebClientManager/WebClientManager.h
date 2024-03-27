@@ -13,6 +13,10 @@
 
 #define GET_REQUEST_PENDING -1
 #define POST_REQUEST_PENDING -2
+#define GET_REQUEST_TIMEOUT -3
+#define POST_REQUEST_TIEMOUT -4
+
+#define REQUEST_TIMEOUT_MS 10000
 
 
 class WebClientManager
@@ -22,7 +26,9 @@ private:
 	bool _socketConnected;
 	int _connectResult;
 	bool _getRequestSent;
+	unsigned long _getRequestTimeoutTime;
 	bool _postRequestSent;
+	unsigned long _postRequestTimeoutTime;
 	int _wifiTimeout;
 	unsigned long _nextSocketConnectionRequest;
 	int _socketConnectFailures;
@@ -35,6 +41,7 @@ private:
 	
 	void internalInitialize();
 	void sendDebugStatus();
+	void connectToSocket(const unsigned long currMillis, const char *server, uint16_t port);
 public:
 	WebClientManager();
 	~WebClientManager();
@@ -47,13 +54,17 @@ public:
 	int getWiFiStatus();
 	bool isWifiConnected();
 	int socketConnectFailures();
+	String wifiStatus();
 
 	bool get(const unsigned long currMillis, const char *server, uint16_t port, const char *path);
 	bool getRequestSent();
 	int getReadResponse(char *buffer, int bufferSize);
 	bool getHasResponse();
 	
-	bool post(const char *server, const char *path);
+	bool post(const unsigned long currMillis, const char *server, uint16_t port, const char *path);
+	bool postRequestSent();
+	int postReadResponse(char *buffer, int bufferSize);
+	bool postHasResponse();
 	
 	
 	JsonResponse htmlParseJsonBody(const String& data);

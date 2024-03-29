@@ -375,7 +375,7 @@ void WebClientManager::connectToSocket(const unsigned long currMillis, const cha
 			
 			if (_socketConnectFailures >= MAXIMUM_FAILURES_TO_RECONNECT)
 			{
-				delete (_wifiClient);
+				Serial2.write(RESET, sizeof(RESET) - 1);
 				internalInitialize();
 			}
 		}

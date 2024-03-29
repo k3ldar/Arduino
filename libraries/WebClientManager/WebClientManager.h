@@ -18,6 +18,8 @@
 
 #define REQUEST_TIMEOUT_MS 10000
 
+static const char RESET[] = "AT+RESET\n";
+
 
 class WebClientManager
 {

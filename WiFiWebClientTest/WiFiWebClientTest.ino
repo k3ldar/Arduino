@@ -7,8 +7,8 @@
 
 #include "MemoryFree.h"
 
-#define UPDATE_SERVER_MILLISECONDS 60000
-#define TEMPERATURE_RETRIEVE_MILLISECONDS 60000
+#define UPDATE_SERVER_MILLISECONDS 30000
+#define TEMPERATURE_RETRIEVE_MILLISECONDS 10000
 
 ///////please enter your sensitive data in the Secret tab/arduino_secrets.h
 char ssid[] = SECRET_SSID;        // your network SSID (name)
@@ -249,9 +249,10 @@ void updateServer(unsigned long currMillis)
             Serial.println("Sending post request");
             float temp = 8.4;
             float humid = 45.6;
+            float rainSensor = 0.3;
             bool rain = false;
             char tempPath[80];
-            sprintf(tempPath, "/Device/UpdateWeather/%ld/%f/%f/%d/", DeviceId, temp, humid, rain);
+            sprintf(tempPath, "/Device/UpdateWeather/%ld/%f/%f/%f/%d/", DeviceId, temp, humid, rainSensor, rain);
             webClient.post(currMillis, server, port, tempPath);
         }
     }

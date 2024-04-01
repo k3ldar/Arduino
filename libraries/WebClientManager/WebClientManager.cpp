@@ -218,6 +218,7 @@ bool WebClientManager::post(const unsigned long currMillis, const char *server, 
 		_wifiClient->println(" HTTP/1.1");
 		_wifiClient->print("Host: ");
 		_wifiClient->println(server);
+		_wifiClient->println("Content-Length: 0");
 		_wifiClient->println("Connection: close");
 		_wifiClient->println();
 		_postRequestSent = true;

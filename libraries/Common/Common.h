@@ -11,10 +11,10 @@ enum MessageType
 
 enum DeviceType
 {
-	None = 0,
-	WeatherStation = 1,
-	WaterPump = 2,
-	TemperatureSensor = 3,
+	DeviceNone = 0,
+	DeviceWeatherStation = 1,
+	DeviceWaterPump = 2,
+	DeviceTemperatureSensor = 3,
 };
 
 typedef void SendMessageCallback(String message, MessageType messageType);

@@ -3,6 +3,7 @@
 WebClientManager::WebClientManager()
 {
 	_connectResult = -1;
+	_nextWiFiConnect = 0;
 	_nextSocketConnectionRequest = 0;
 	_socketConnectFailures = 0;
 	_getRequestSent = false;
@@ -36,17 +37,55 @@ void WebClientManager::initialize(SendMessageCallback *sendMesageCallback, int t
 	internalInitialize();
 }
 
-void WebClientManager::process()
+void WebClientManager::process(unsigned long currMillis)
 {
-	if (_wifiStatus == WL_CONNECTING)
+	if (isWaiting(currMillis))
+		return;
+	
+	switch (_wifiStatus)
 	{
-		_wifiStatus = WiFi.isConnected();
-		printWifiStatus();
+		case WL_CONNECTED:
+			if (_wifiConnectFailures > 0)
+				_wifiConnectFailures = 0;
+			
+			break;
+			
+		case WL_CONNECTING:
+			_wifiStatus = getWiFiStatus();
+			printWifiStatus();
+			
+			break;
+		
+		case WL_CONNECTION_LOST:
+		case WL_CONNECT_FAILED:
+			Serial.println("Connection Failed/Lost");
+
+			if (_socketConnected)
+				disconnectFromSocket();
+			
+			_wifiStatus = WL_DISCONNECTING;
+			wait(currMillis, DISCONNECT_TIMEOUT);
+			_wifiConnectFailures++;
+			
+			break;
+			
+		case WL_DISCONNECTING:
+			printWifiStatus();
+			_wifiStatus = WiFi.isConnected();
+			
+			break;
+			
+		case WL_NO_MODULE:
+			_sendMessageCallback("Communication with WiFi module failed!", Information);
+			
+			break;
+
 	}
-	else if (_wifiStatus == WL_CONNECT_FAILED)
-	{
-		connectToWiFi();
-	}
+}
+
+bool WebClientManager::isWaiting(unsigned long currMillis)
+{
+	return _nextWiFiConnect > currMillis;
 }
 
 void WebClientManager::connectToWiFi()
@@ -55,10 +94,11 @@ void WebClientManager::connectToWiFi()
   String connectMessage = "Attempting to connect to SSID: ";
   connectMessage.concat(_ssid);
   _sendMessageCallback(connectMessage, Information);
+  _wifiConnectFailures = 0;
   
   // Connect to WPA/WPA2 network. Change this line if using open or WEP network:
   _wifiStatus = WiFi.begin(_ssid, _pass);
-    
+  wait(millis(), CONNECT_TIMEOUT);
   String statusMessage = "Wifi Connecting Status: ";
   statusMessage.concat(_wifiStatus);
   _sendMessageCallback(statusMessage, Information);
@@ -66,24 +106,28 @@ void WebClientManager::connectToWiFi()
 
 void WebClientManager::printWifiStatus() 
 {
-	String wifiStatus = "SSID: ";
-	wifiStatus.concat(WiFi.SSID());
-	wifiStatus.concat("; Ip Address: ");
-	wifiStatus.concat(WiFi.localIP());
-	wifiStatus.concat("; Signal: ");
-	wifiStatus.concat(WiFi.RSSI());
-	wifiStatus.concat(" dBm");
-	_sendMessageCallback(wifiStatus, Information);
+	_sendMessageCallback(wifiStatus(), Information);
 }
 
 int WebClientManager::getWiFiStatus()
 {
-	return _wifiStatus;
+	unsigned long currMillis = millis();
+	
+	if (currMillis < _nextStatus)
+		return _wifiStatus;
+	
+	_wifiStatus = WiFi.isConnected();
+	_nextStatus = currMillis + MIN_STATUS_TIME;
 }
 
 bool WebClientManager::isWifiConnected()
 {
-	return WiFi.isConnected();
+	return getWiFiStatus();
+}
+
+int WebClientManager::wifiConnectFailures()
+{
+	return _wifiConnectFailures;
 }
 
 int WebClientManager::socketConnectFailures()
@@ -93,22 +137,86 @@ int WebClientManager::socketConnectFailures()
 
 String WebClientManager::wifiStatus()
 {
-	String status = "Wifi Status: ";
-	status.concat(_wifiStatus);
+	String status = "SSID: ";
+	status.concat(WiFi.SSID());
+	status.concat("; RSSI: ");
+	status.concat(WiFi.RSSI());
+	status.concat(" dBm; Ip Address: ");
+	status.concat(WiFi.localIP());
+	status.concat("; Wifi Status: ");
+	status.concat(wifiConnectionStatus());
 	status.concat("; socketConnected: ");
 	status.concat(_socketConnected);
 	status.concat("; currMillis: ");
 	status.concat(millis());
-	status.concat("; get requestSent: ");
+	status.concat("; Get Sent: ");
 	status.concat(_getRequestSent);
-	status.concat("; get request timeout: ");
+	status.concat("; Get Timeout: ");
 	status.concat(_getRequestTimeoutTime);
-	status.concat("; post requestSent: ");
+	status.concat("; Post Sent: ");
 	status.concat(_postRequestSent);
-	status.concat("; post request timeout: ");
+	status.concat("; Post Timeout: ");
 	status.concat(_postRequestTimeoutTime);
+	status.concat("; next Socket: ");
+	status.concat(_nextSocketConnectionRequest);
 	
 	return status;
+}
+
+String WebClientManager::wifiConnectionStatus()
+{
+	switch (_wifiStatus)
+	{
+		case WL_IDLE_STATUS:
+			return "Idle";
+		case WL_NO_SSID_AVAIL:
+			return "No SSID";
+		case WL_SCAN_COMPLETED:
+			return "Scan Completed";
+		case WL_CONNECTED:
+			return "Connected";
+		case WL_CONNECT_FAILED:
+			return "Connect Failed";
+		case WL_CONNECTION_LOST:
+			return "Connection Lost";
+		case WL_DISCONNECTED:
+			return "Disconnected";
+		case WL_AP_LISTENING:
+			return "AP Listening";
+		case WL_AP_CONNECTED:
+			return "AP Connected";
+		case WL_AP_FAILED:
+			return "AP Failed";
+		case WL_CONNECTING:
+			return "Connecting";
+		case WL_DISCONNECTING:
+			return "Disconnecting";
+	}
+	
+	return "Unknown";
+}
+
+void WebClientManager::setTimeout(int timeout)
+{
+	_wifiClient->setConnectionTimeout(timeout);
+}
+
+long WebClientManager::getRssi()
+{
+	unsigned long currMillis = millis();
+	
+	if (currMillis > _nextRssi)
+	{	
+		_lastRssi = WiFi.RSSI();
+		_nextRssi = currMillis + MIN_STATUS_TIME;
+	}
+	
+	return _lastRssi;
+}
+
+bool WebClientManager::canConnectToSocket(unsigned long currMillis)
+{
+	return currMillis > _nextSocketConnectionRequest;
 }
 
 
@@ -119,7 +227,8 @@ bool WebClientManager::get(const unsigned long currMillis, const char *server, u
 	if (_postRequestSent)
 		return false;
 	
-	connectToSocket(currMillis, server, port);
+	if (!connectToSocket(currMillis, server, port))
+		return false;
 	
 	if (!_getRequestSent && _connectResult > 0)
 	{
@@ -131,13 +240,14 @@ bool WebClientManager::get(const unsigned long currMillis, const char *server, u
 		_wifiClient->println(" HTTP/1.1");
 		_wifiClient->print("Host: ");
 		_wifiClient->println(server);
-		_wifiClient->println("Connection: close");
+		//_wifiClient->println("Connection: close");
 		_wifiClient->println();
 		_getRequestSent = true;
-		_getRequestTimeoutTime = millis() + REQUEST_TIMEOUT_MS;
+		_getRequestTimeoutTime = currMillis + REQUEST_TIMEOUT_MS;
 		return true;
 	}
 
+	_nextSocketConnectionRequest = currMillis + SOCKET_CONNECT_DELAY;
 	return false;
 }
 
@@ -183,9 +293,10 @@ int WebClientManager::getReadResponse(char *buffer, int bufferSize)
 	// if the server's disconnected, stop the client:
 	_getRequestSent = false;
 	
-	if (!_wifiClient->connected())
+	if (_wifiClient->connected())
 	{
 		_sendMessageCallback("disconnecting from server.", Information);
+		_wifiClient->flush();
 		_wifiClient->stop();
 		_socketConnected = false;
 	}
@@ -206,7 +317,8 @@ bool WebClientManager::post(const unsigned long currMillis, const char *server, 
 	if (_getRequestSent)
 		return false;
 	
-	connectToSocket(currMillis, server, port);
+	if (!connectToSocket(currMillis, server, port))
+		return false;
 	
 	if (!_postRequestSent && _connectResult > 0)
 	{
@@ -219,10 +331,10 @@ bool WebClientManager::post(const unsigned long currMillis, const char *server, 
 		_wifiClient->print("Host: ");
 		_wifiClient->println(server);
 		_wifiClient->println("Content-Length: 0");
-		_wifiClient->println("Connection: close");
+		//_wifiClient->println("Connection: close");
 		_wifiClient->println();
 		_postRequestSent = true;
-		_postRequestTimeoutTime = millis() + REQUEST_TIMEOUT_MS;
+		_postRequestTimeoutTime = currMillis + REQUEST_TIMEOUT_MS;
 		return true;
 	}
 
@@ -278,9 +390,10 @@ int WebClientManager::postReadResponse(char *buffer, int bufferSize)
 	// if the server's disconnected, stop the client:
 	_postRequestSent = false;
 	
-	if (!_wifiClient->connected())
+	if (_wifiClient->connected())
 	{
 		_sendMessageCallback("disconnecting from server.", Information);
+		_wifiClient->flush();
 		_wifiClient->stop();
 		_socketConnected = false;
 	}
@@ -329,6 +442,8 @@ JsonResponse WebClientManager::htmlParseJsonBody(const String& data)
 
 /// Private Methods
 
+!!!!!!!!   would be nice to internal initialize after n connection errors
+
 void WebClientManager::internalInitialize()
 {
 	_wifiStatus = WL_IDLE_STATUS;
@@ -347,7 +462,7 @@ void WebClientManager::sendDebugStatus()
 	_sendMessageCallback(wifiStatus(), Debug);
 }
 
-void WebClientManager::connectToSocket(const unsigned long currMillis, const char *server, uint16_t port)
+bool WebClientManager::connectToSocket(const unsigned long currMillis, const char *server, uint16_t port)
 {
 	if (_wifiStatus == WL_CONNECTED && !_socketConnected && currMillis > _nextSocketConnectionRequest)
 	{
@@ -355,8 +470,11 @@ void WebClientManager::connectToSocket(const unsigned long currMillis, const cha
 
 		if (!_socketConnected)
 		{
+			int timeout = _wifiClient->getConnectionTimeout();
+			_wifiClient->setConnectionTimeout(1000);
 			// if you get a connection, report back via message callback :
 			_connectResult = _wifiClient->connect(server, port);
+			_wifiClient->setConnectionTimeout(timeout);
 			String connectResult = "client.connect result: ";
 			connectResult.concat(_connectResult);
 			_sendMessageCallback(connectResult, Information);
@@ -369,19 +487,38 @@ void WebClientManager::connectToSocket(const unsigned long currMillis, const cha
 		}
 		else
 		{
+			_nextSocketConnectionRequest = currMillis + SOCKET_CONNECT_DELAY;
 			_socketConnected = false;
 			_getRequestSent = false;
 			_sendMessageCallback("Socket not obtained", Error);
 			_socketConnectFailures++;
 			
-			if (_socketConnectFailures >= MAXIMUM_FAILURES_TO_RECONNECT)
+			if (_socketConnectFailures > MAX_CONNECT_FAILURES)
 			{
-				Serial2.write(RESET, sizeof(RESET) - 1);
-				internalInitialize();
+				_sendMessageCallback(wifiStatus(), Information);
+				_socketConnectFailures = 0;
+				disconnectFromSocket();
 			}
 		}
 			
-		_nextSocketConnectionRequest = currMillis + SOCKET_CONNECT_DELAY;
 		sendDebugStatus();
+		return true;
 	}
+
+	return false;
+}
+
+void WebClientManager::disconnectFromSocket()
+{
+	if (!_socketConnected)
+		return;
+	
+	_wifiClient->stop();
+	_socketConnected = false;
+	wait(millis(), DISCONNECT_TIMEOUT);
+}
+
+void WebClientManager::wait(unsigned long currMillis, unsigned long waitTime)
+{
+	_nextWiFiConnect = currMillis + waitTime;
 }

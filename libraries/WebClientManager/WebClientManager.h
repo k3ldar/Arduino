@@ -8,7 +8,6 @@
 
 #include "Common.h"
 
-#define MAXIMUM_FAILURES_TO_RECONNECT 5
 #define SOCKET_CONNECT_DELAY 1000
 
 #define GET_REQUEST_PENDING -1
@@ -19,7 +18,6 @@
 #define REQUEST_TIMEOUT_MS 10000
 #define DISCONNECT_TIMEOUT 2000
 #define CONNECT_TIMEOUT 10000
-#define MAX_CONNECT_FAILURES 5
 #define MIN_STATUS_TIME 600
 
 static const char RESET[] = "AT+RESET\n";
@@ -39,11 +37,12 @@ private:
 	unsigned long _nextSocketConnectionRequest;
 	int _socketConnectFailures;
 	int _wifiConnectFailures;
+	int _maxFailures;
 	unsigned long _nextWiFiConnect;
 	unsigned long _nextRssi;
 	unsigned long _nextStatus;
 
-	long _lastRssi;
+	int32_t _lastRssi;
 	
 	char *_ssid;
 	char *_pass;
@@ -59,13 +58,14 @@ private:
 public:
 	WebClientManager();
 	~WebClientManager();
-	void initialize(SendMessageCallback *sendMesageCallbackr, int timeout, char *ssid, char *pass);
+	void initialize(SendMessageCallback *sendMesageCallbackr, int timeout, char *ssid, char *pass, int maxFailures);
 
 	void process(unsigned long currMillis);
 	
 	bool isWaiting(unsigned long currMillis);
 
 	void connectToWiFi();
+	void disconnectFromWiFi();
 	void printWifiStatus();
 	int getWiFiStatus();
 	bool isWifiConnected();
@@ -74,7 +74,7 @@ public:
 	String wifiStatus();
 	String wifiConnectionStatus();
 	void setTimeout(int timeout);
-	long getRssi();
+	int32_t getRssi();
 	bool canConnectToSocket(unsigned long currMillis);
 
 

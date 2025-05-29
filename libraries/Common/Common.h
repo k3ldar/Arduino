@@ -3,10 +3,10 @@
 
 
 #include <Arduino.h>
-#define WEATHER_STATION_
-#define WATER_PUMP
-#define DEBUG_
-#define RELEASE
+#define WEATHER_STATION
+#define WATER_PUMP_
+#define DEBUG
+#define RELEASE_
 
 #if defined(WEATHER_STATION)
 #define LED_WEATHER_STATION

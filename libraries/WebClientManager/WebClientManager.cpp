@@ -297,7 +297,7 @@ int WebClientManager::getReadResponse(char *buffer, int bufferSize)
 	int count = 0;
 	String response = "Reading get response; client available: ";
 	response.concat(_wifiClient->available());
-	_sendMessageCallback(response, Debug);
+	_sendMessageCallback(response, Information);
 	
 	while (_wifiClient->available() && count < bufferSize)
 	{
@@ -335,7 +335,7 @@ bool WebClientManager::post(const unsigned long currMillis, const char *server, 
 	
 	if (!connectToSocket(currMillis, server, port))
 	{
-		_sendMessageCallback("Waiting for connection to Socket", Debug);
+		_sendMessageCallback("Waiting for connection to Socket", Information);
 		return false;
 	}
 	
@@ -350,7 +350,7 @@ bool WebClientManager::post(const unsigned long currMillis, const char *server, 
 		_wifiClient->print("Host: ");
 		_wifiClient->println(server);
 		_wifiClient->println("Content-Length: 0");
-		_wifiClient->println("Connection: close");
+		//_wifiClient->println("Connection: close");
 		_wifiClient->println();
 		_postRequestSent = true;
 		_postRequestTimeoutTime = currMillis + REQUEST_TIMEOUT_MS;
@@ -358,7 +358,7 @@ bool WebClientManager::post(const unsigned long currMillis, const char *server, 
 	}
 	
 	String debugMsg = combineStrings("Post not Sent: %d; connectResult: %d", _postRequestSent, _connectResult);
-	_sendMessageCallback(debugMsg, Debug);
+	_sendMessageCallback(debugMsg, Information);
 	return false;
 }
 
@@ -387,7 +387,7 @@ int WebClientManager::postReadResponse(char *buffer, int bufferSize)
 
 	if (_getRequestSent)
 	{
-		_sendMessageCallback("get sent, unable to read post response", Debug);
+		_sendMessageCallback("get sent, unable to read post response", Information);
 		return GET_REQUEST_PENDING;
 	}
 	
@@ -400,7 +400,7 @@ int WebClientManager::postReadResponse(char *buffer, int bufferSize)
 	int count = 0;
 	
 	String debugMsg = combineStrings("reading post response; client available: %d", _wifiClient->available());
-	_sendMessageCallback(debugMsg, Debug);
+	_sendMessageCallback(debugMsg, Information);
 	
 	while (_wifiClient->available() && count < bufferSize)
 	{
@@ -409,6 +409,9 @@ int WebClientManager::postReadResponse(char *buffer, int bufferSize)
 		count++;
 	}  
 
+	if (count == 0)
+		return POST_REQUEST_PENDING;
+	
 	// if the server's disconnected, stop the client:
 	_postRequestSent = false;
 	
@@ -481,7 +484,7 @@ void WebClientManager::internalInitialize()
 
 void WebClientManager::sendDebugStatus()
 {
-	_sendMessageCallback(wifiStatus(), Debug);
+	_sendMessageCallback(wifiStatus(), Information);
 }
 
 bool WebClientManager::connectToSocket(const unsigned long currMillis, const char *server, uint16_t port)
@@ -490,16 +493,16 @@ bool WebClientManager::connectToSocket(const unsigned long currMillis, const cha
 		return true;
 	
 	String debugMsg = combineStrings("Socket Status: %s; Connected: %d; currMillis: %d; next millis: %d", wifiConnectionStatus().c_str(), _socketConnected, currMillis, _nextSocketConnectionRequest);
-	_sendMessageCallback(debugMsg, Debug);
+	_sendMessageCallback(debugMsg, Information);
 	
 	if (_wifiStatus == WL_CONNECTED && !_socketConnected && currMillis > _nextSocketConnectionRequest)
 	{
-		_sendMessageCallback("Starting connection to server", Debug);
+		_sendMessageCallback("Starting connection to server", Information);
 
 		if (!_socketConnected)
 		{
 			int timeout = _wifiClient->getConnectionTimeout();
-			_wifiClient->setConnectionTimeout(1000);
+			_wifiClient->setConnectionTimeout(CONNECT_TIMEOUT);
 			// if you get a connection, report back via message callback :
 			_connectResult = _wifiClient->connect(server, port);
 			_wifiClient->setConnectionTimeout(timeout);

@@ -1,3 +1,7 @@
+// MovementDetector v1.0 - https://github.com/k3ldar/Arduino/tree/main/MovementDetector
+// Copyright © 2025, Simon Carter
+// GPL-3.0 License
+
 #include "MovementDetector.h"
 
 #define MinimumDistance 0.0
@@ -9,7 +13,7 @@
 MovementDetector::MovementDetector(int triggerPin, int echoPin)
   : triggerPin(triggerPin), echoPin(echoPin) {}
 
-void MovementDetector::begin(const DetectorConfig& cfg)
+void MovementDetector::setup(const DetectorConfig& cfg)
 {
   pinMode(triggerPin, OUTPUT);
   pinMode(echoPin, INPUT);

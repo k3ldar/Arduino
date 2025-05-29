@@ -1,3 +1,6 @@
+// MovementDetector Sample - https://github.com/k3ldar/Arduino/tree/main/MovementDetector
+// Copyright © 2025, Simon Carter
+// GPL-3.0 License
 
 #include "MovementDetector.h"
 
@@ -132,7 +135,7 @@ void setup() {
   config.defaultBaseline = 100.0;       // cm
   config.maximumDistance = 250;         // cm
 
-  detector.begin(config);
+  detector.setup(config);
   detector.setStateChangeCallback(onStateChanged);
   detector.setResetBaseLineCallback(onResetBaseLine);
 

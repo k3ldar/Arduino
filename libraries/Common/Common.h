@@ -5,8 +5,8 @@
 #include <Arduino.h>
 #define WEATHER_STATION
 #define WATER_PUMP_
-#define DEBUG
-#define RELEASE_
+#define DEBUG_
+#define RELEASE
 
 #if defined(WEATHER_STATION)
 #define LED_WEATHER_STATION

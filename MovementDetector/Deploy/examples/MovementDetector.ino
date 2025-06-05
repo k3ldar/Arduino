@@ -7,16 +7,10 @@
 
 #define SerialConnectDelay 200
 
-#define SensorPowerPin D13
-#define EchoPin D12
-#define TriggerPin D11
-
-#define Light6 D7
-#define Light5 D6
-#define Light4 D5
-#define Light3 D4
-#define Light2 D3
-#define Light1 D2
+#define TriggerPin D4
+#define EchoPin D5
+#define LightRelayPin D6
+#define SensorPowerPin D7
 
 const float LightFlashDistance = 100.0;
 
@@ -32,12 +26,12 @@ void updateLight(bool isOn)
 {
   if (isOn)
   {
-    digitalWrite(Light1, HIGH);
+    digitalWrite(LightRelayPin, HIGH);
     isLightOn = true;
   }
   else
   {
-    digitalWrite(Light1, LOW);
+    digitalWrite(LightRelayPin, LOW);
     isLightOn = false;
   }
 }
@@ -149,7 +143,7 @@ void setup() {
   digitalWrite(SensorPowerPin, HIGH);
   delay(500);
 
-  pinMode(Light1, OUTPUT);
+  pinMode(LightRelayPin, OUTPUT);
   updateLight(false);
 }
 
